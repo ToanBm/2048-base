@@ -34,33 +34,58 @@ export async function getFarcasterManifest() {
       }
     : undefined;
 
+  // Helper function to filter out empty properties
+  function withValidProperties(properties: Record<string, unknown>) {
+    return Object.fromEntries(
+      Object.entries(properties).filter(([_, value]) => {
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        if (typeof value === "boolean") {
+          return true; // Include boolean values
+        }
+        return !!value;
+      })
+    );
+  }
+
+  const miniappData = withValidProperties({
+    version: "1",
+    name: appName,
+    subtitle: "Play 2048 game onchain",
+    description: "Classic 2048 puzzle game with onchain leaderboard. Compete with friends and climb the rankings!",
+    screenshotUrls: [`${appUrl}/images/feed.png`],
+    iconUrl: `${appUrl}/images/icon.png`,
+    splashImageUrl: `${appUrl}/images/splash.png`,
+    splashBackgroundColor: "#FFFFFF",
+    homeUrl: appUrl,
+    webhookUrl: `${appUrl}/api/webhook`,
+    primaryCategory: "games",
+    tags: ["puzzle", "games", "leaderboard", "onchain"],
+    heroImageUrl: `${appUrl}/images/feed.png`,
+    tagline: "2048 puzzle game onchain",
+    ogTitle: "2048 Onchain - Puzzle Game",
+    ogDescription: "Classic 2048 puzzle game with onchain leaderboard. Compete with friends!",
+    ogImageUrl: `${appUrl}/images/feed.png`,
+    noindex: noindex,
+  });
+
   // Build response object
   const response: Record<string, unknown> = {
-    miniapp: {
-      version: "1",
-      name: appName,
-      subtitle: "Play 2048 game onchain",
-      description: "Classic 2048 puzzle game with onchain leaderboard. Compete with friends and climb the rankings!",
-      screenshotUrls: [`${appUrl}/images/feed.png`],
-      iconUrl: `${appUrl}/images/icon.png`,
-      splashImageUrl: `${appUrl}/images/splash.png`,
-      splashBackgroundColor: "#FFFFFF",
-      homeUrl: appUrl,
-      webhookUrl: `${appUrl}/api/webhook`,
-      primaryCategory: "games",
-      tags: ["puzzle", "games", "leaderboard", "onchain"],
-      heroImageUrl: `${appUrl}/images/feed.png`,
-      tagline: "2048 puzzle game onchain",
-      ogTitle: "2048 Onchain - Puzzle Game",
-      ogDescription: "Classic 2048 puzzle game with onchain leaderboard. Compete with friends!",
-      ogImageUrl: `${appUrl}/images/feed.png`,
-      noindex: noindex,
-    },
+    miniapp: miniappData,
   };
 
   // Add accountAssociation if it exists
   if (accountAssociation) {
     response.accountAssociation = accountAssociation;
+  }
+
+  // Add baseBuilder if ownerAddress is set in env
+  const ownerAddress = process.env.NEXT_PUBLIC_BASE_BUILDER_ADDRESS;
+  if (ownerAddress) {
+    response.baseBuilder = {
+      ownerAddress: ownerAddress,
+    };
   }
 
   return response;
