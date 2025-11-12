@@ -48,7 +48,7 @@ export async function getFarcasterManifest() {
       homeUrl: appUrl,
       webhookUrl: `${appUrl}/api/webhook`,
       primaryCategory: "games",
-      tags: ["2048", "puzzle", "games", "leaderboard"],
+      tags: ["puzzle", "games", "leaderboard", "onchain"],
       heroImageUrl: `${appUrl}/images/feed.png`,
       tagline: "2048 puzzle game onchain",
       ogTitle: "2048 Onchain - Puzzle Game",
