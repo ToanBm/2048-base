@@ -49,24 +49,27 @@ export async function getFarcasterManifest() {
     );
   }
 
+  // Add version parameter to force reload images (cache busting)
+  const imageVersion = "v3";
+  
   const miniappData = withValidProperties({
     version: "1",
     name: appName,
     subtitle: "Play 2048 game onchain",
     description: "Classic 2048 puzzle game with onchain leaderboard. Compete with friends and climb the rankings!",
-    screenshotUrls: [`${appUrl}/images/feed.png`],
-    iconUrl: `${appUrl}/images/icon.png`,
-    splashImageUrl: `${appUrl}/images/splash.png`,
+    screenshotUrls: [`${appUrl}/images/feed.png?${imageVersion}`],
+    iconUrl: `${appUrl}/images/icon.png?${imageVersion}`,
+    splashImageUrl: `${appUrl}/images/splash.png?${imageVersion}`,
     splashBackgroundColor: "#FFFFFF",
     homeUrl: appUrl,
     webhookUrl: `${appUrl}/api/webhook`,
     primaryCategory: "games",
     tags: ["puzzle", "games", "leaderboard", "onchain"],
-    heroImageUrl: `${appUrl}/images/feed.png`,
+    heroImageUrl: `${appUrl}/images/feed.png?${imageVersion}`,
     tagline: "2048 puzzle game onchain",
     ogTitle: "2048 Onchain - Puzzle Game",
     ogDescription: "Classic 2048 puzzle game with onchain leaderboard. Compete with friends!",
-    ogImageUrl: `${appUrl}/images/feed.png`,
+    ogImageUrl: `${appUrl}/images/feed.png?${imageVersion}`,
     noindex: noindex,
   });
 

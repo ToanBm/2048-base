@@ -96,7 +96,7 @@ export async function GET(
     );
   } catch (e) {
     // Log and handle any errors during image generation
-    console.log(`Failed to generate streak image`, e);
+    console.error(`Failed to generate streak image`, e);
     return new Response(`Failed to generate streak image`, {
       status: 500,
     });

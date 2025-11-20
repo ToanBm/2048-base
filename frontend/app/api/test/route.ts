@@ -10,9 +10,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // you can fetch user FID like this
-  console.log({ fid: req.headers.get("x-user-fid") });
-
   // In a real app, you'd validate the token here
   return NextResponse.json({
     message: "Authentication successful!",

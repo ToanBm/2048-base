@@ -30,4 +30,9 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* Safe area insets for mobile devices */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

@@ -6,8 +6,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Farcaster Mini-app Starter",
-  description: "A starter for Farcaster mini-apps",
+  title: "2048 Onchain",
+  description: "Classic 2048 puzzle game with onchain leaderboard",
 };
 
 export default function RootLayout({

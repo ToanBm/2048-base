@@ -5,17 +5,31 @@ import { env } from "@/lib/env";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
 import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
 import "@coinbase/onchainkit/styles.css";
-import dynamic from "next/dynamic";
 import { base } from "wagmi/chains";
+import { useTheme } from "@/hooks/use-theme";
+import { useEffect } from "react";
 
-const ErudaProvider = dynamic(
-  () => import("../components/Eruda").then((c) => c.ErudaProvider),
-  { ssr: false }
-);
+// ErudaProvider disabled - uncomment for debugging
+// import dynamic from "next/dynamic";
+// const ErudaProvider = dynamic(
+//   () => import("../components/Eruda").then((c) => c.ErudaProvider),
+//   { ssr: false }
+// );
+
+function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { mounted } = useTheme();
+  
+  // Prevent flash of unstyled content
+  if (!mounted) {
+    return <>{children}</>;
+  }
+  
+  return <>{children}</>;
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ErudaProvider>
+    <ThemeProvider>
       <OnchainKitProvider
         apiKey={env.NEXT_PUBLIC_ONCHAINKIT_API_KEY || undefined}
         projectId={env.NEXT_PUBLIC_MINIKIT_PROJECT_ID}
@@ -23,6 +37,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         config={{
           appearance: {
             mode: "auto",
+          },
+          wallet: {
+            display: "modal",
           },
         }}
       >
@@ -34,6 +51,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           <MiniAppProvider>{children}</MiniAppProvider>
         </MiniKitProvider>
       </OnchainKitProvider>
-    </ErudaProvider>
+    </ThemeProvider>
   );
 }

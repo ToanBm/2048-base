@@ -76,11 +76,6 @@ export async function POST(request: Request) {
 
   switch (event.event) {
     case "frame_added":
-      console.log(
-        "frame_added",
-        "event.notificationDetails",
-        event.notificationDetails
-      );
       if (event.notificationDetails) {
         await setUserNotificationDetails(fid, event.notificationDetails);
         await sendFrameNotification({
@@ -94,12 +89,10 @@ export async function POST(request: Request) {
 
       break;
     case "frame_removed": {
-      console.log("frame_removed");
       await deleteUserNotificationDetails(fid);
       break;
     }
     case "notifications_enabled": {
-      console.log("notifications_enabled", event.notificationDetails);
       await setUserNotificationDetails(fid, event.notificationDetails);
       await sendFrameNotification({
         fid,
@@ -110,7 +103,6 @@ export async function POST(request: Request) {
       break;
     }
     case "notifications_disabled": {
-      console.log("notifications_disabled");
       await deleteUserNotificationDetails(fid);
 
       break;

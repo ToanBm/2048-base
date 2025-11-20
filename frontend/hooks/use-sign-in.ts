@@ -57,7 +57,6 @@ export const useSignIn = ({ autoSignIn = false }: { autoSignIn?: boolean }) => {
       }
 
       const data = await res.json();
-      console.log("data", data);
       setUser(data.user);
       setIsSignedIn(true);
       return data;

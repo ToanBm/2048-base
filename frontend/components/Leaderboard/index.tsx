@@ -67,47 +67,47 @@ export default function Leaderboard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] mx-4 flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-70">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[80vh] mx-4 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-2xl font-bold text-gray-800">🏆 Leaderboard</h2>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">🏆 Leaderboard</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             ×
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b">
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setActiveTab("all-time")}
-            className={`flex-1 py-3 px-4 font-semibold transition-colors ${
+            className={`flex-1 py-3 px-4 min-h-[44px] font-semibold transition-colors ${
               activeTab === "all-time"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-500 dark:bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
             }`}
           >
             All-Time
           </button>
           <button
             onClick={() => setActiveTab("weekly")}
-            className={`flex-1 py-3 px-4 font-semibold transition-colors ${
+            className={`flex-1 py-3 px-4 min-h-[44px] font-semibold transition-colors ${
               activeTab === "weekly"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-500 dark:bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
             }`}
           >
             Weekly
           </button>
           <button
             onClick={() => setActiveTab("daily")}
-            className={`flex-1 py-3 px-4 font-semibold transition-colors ${
+            className={`flex-1 py-3 px-4 min-h-[44px] font-semibold transition-colors ${
               activeTab === "daily"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-500 dark:bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
             }`}
           >
             Daily
@@ -118,11 +118,11 @@ export default function Leaderboard({
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="text-gray-500">Loading...</div>
+              <div className="text-gray-500 dark:text-gray-400">Loading...</div>
             </div>
           ) : scores.length === 0 ? (
             <div className="flex items-center justify-center py-8">
-              <div className="text-gray-500 text-center">
+              <div className="text-gray-500 dark:text-gray-400 text-center">
                 <p className="text-lg mb-2">No scores yet</p>
                 <p className="text-sm">Be the first to submit a score!</p>
               </div>
@@ -139,39 +139,39 @@ export default function Leaderboard({
                     key={entry.id}
                     className={`flex items-center justify-between p-3 rounded-lg ${
                       isCurrentUser
-                        ? "bg-blue-50 border-2 border-blue-500"
-                        : "bg-gray-50"
+                        ? "bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500 dark:border-blue-400"
+                        : "bg-gray-50 dark:bg-gray-700"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
                           index === 0
-                            ? "bg-yellow-400 text-yellow-900"
+                            ? "bg-yellow-400 dark:bg-yellow-500 text-yellow-900 dark:text-yellow-900"
                             : index === 1
-                            ? "bg-gray-300 text-gray-700"
+                            ? "bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200"
                             : index === 2
-                            ? "bg-orange-300 text-orange-900"
-                            : "bg-gray-200 text-gray-600"
+                            ? "bg-orange-300 dark:bg-orange-500 text-orange-900 dark:text-orange-900"
+                            : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
                         }`}
                       >
                         {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-800">
+                        <div className="font-semibold text-gray-800 dark:text-gray-100">
                           {shortenAddress(entry.player_address)}
                           {isCurrentUser && (
-                            <span className="ml-2 text-blue-600 text-xs">
+                            <span className="ml-2 text-blue-600 dark:text-blue-400 text-xs">
                               (You)
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(entry.timestamp).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
-                    <div className="text-xl font-bold text-gray-800">
+                    <div className="text-xl font-bold text-gray-800 dark:text-gray-100">
                       {formatScore(entry.score)}
                     </div>
                   </div>
