@@ -23,15 +23,15 @@ export async function getFarcasterManifest() {
   // Only include accountAssociation if all fields are present
   const hasAccountAssociation = 
     env.NEXT_PUBLIC_FARCASTER_HEADER && 
-    env.NEXT_PUBLIC_FARCASTER_PAYLOAD && 
+                       env.NEXT_PUBLIC_FARCASTER_PAYLOAD && 
     env.NEXT_PUBLIC_FARCASTER_SIGNATURE;
 
   const accountAssociation = hasAccountAssociation
-    ? {
-        header: env.NEXT_PUBLIC_FARCASTER_HEADER,
-        payload: env.NEXT_PUBLIC_FARCASTER_PAYLOAD,
-        signature: env.NEXT_PUBLIC_FARCASTER_SIGNATURE,
-      }
+      ? {
+          header: env.NEXT_PUBLIC_FARCASTER_HEADER,
+          payload: env.NEXT_PUBLIC_FARCASTER_PAYLOAD,
+          signature: env.NEXT_PUBLIC_FARCASTER_SIGNATURE,
+        }
     : undefined;
 
   // Helper function to filter out empty properties
@@ -53,7 +53,7 @@ export async function getFarcasterManifest() {
   const imageVersion = "v3";
   
   const miniappData = withValidProperties({
-    version: "1",
+      version: "1",
     name: appName,
     subtitle: "Play 2048 game onchain",
     description: "Classic 2048 puzzle game with onchain leaderboard. Compete with friends and climb the rankings!",
@@ -61,8 +61,8 @@ export async function getFarcasterManifest() {
     iconUrl: `${appUrl}/images/icon.png?${imageVersion}`,
     splashImageUrl: `${appUrl}/images/splash.png?${imageVersion}`,
     splashBackgroundColor: "#FFFFFF",
-    homeUrl: appUrl,
-    webhookUrl: `${appUrl}/api/webhook`,
+      homeUrl: appUrl,
+      webhookUrl: `${appUrl}/api/webhook`,
     primaryCategory: "games",
     tags: ["puzzle", "games", "leaderboard", "onchain"],
     heroImageUrl: `${appUrl}/images/feed.png?${imageVersion}`,
@@ -70,7 +70,7 @@ export async function getFarcasterManifest() {
     ogTitle: "2048 Onchain - Puzzle Game",
     ogDescription: "Classic 2048 puzzle game with onchain leaderboard. Compete with friends!",
     ogImageUrl: `${appUrl}/images/feed.png?${imageVersion}`,
-    noindex: noindex,
+      noindex: noindex,
   });
 
   // Build response object
@@ -88,7 +88,7 @@ export async function getFarcasterManifest() {
   if (ownerAddress) {
     response.baseBuilder = {
       ownerAddress: ownerAddress,
-    };
+  };
   }
 
   return response;

@@ -27,9 +27,13 @@ export const env = createEnv({
     NEXT_PUBLIC_FARCASTER_HEADER: z.string().min(1).optional(),
     NEXT_PUBLIC_FARCASTER_PAYLOAD: z.string().min(1).optional(),
     NEXT_PUBLIC_FARCASTER_SIGNATURE: z.string().min(1).optional(),
-    // REQUIRED: Supabase configuration
-    NEXT_PUBLIC_SUPABASE_URL: z.string().min(1),
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+    // REQUIRED: Supabase configuration - REMOVED
+    // NEXT_PUBLIC_SUPABASE_URL: z.string().min(1),
+    // NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+    // OPTIONAL: Game2048 Contract Address
+    NEXT_PUBLIC_GAME2048_CONTRACT_ADDRESS: z.string().min(1).optional(),
+    // OPTIONAL: Paymaster URL for gas sponsorship (from Coinbase Developer Platform)
+    NEXT_PUBLIC_PAYMASTER_URL: z.string().url().optional(),
   },
   // For Next.js >= 13.4.4, you only need to destructure client variables:
   experimental__runtimeEnv: {
@@ -40,7 +44,9 @@ export const env = createEnv({
     NEXT_PUBLIC_FARCASTER_HEADER: process.env.NEXT_PUBLIC_FARCASTER_HEADER,
     NEXT_PUBLIC_FARCASTER_PAYLOAD: process.env.NEXT_PUBLIC_FARCASTER_PAYLOAD,
     NEXT_PUBLIC_FARCASTER_SIGNATURE: process.env.NEXT_PUBLIC_FARCASTER_SIGNATURE,
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    // NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    // NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_GAME2048_CONTRACT_ADDRESS: process.env.NEXT_PUBLIC_GAME2048_CONTRACT_ADDRESS,
+    NEXT_PUBLIC_PAYMASTER_URL: process.env.NEXT_PUBLIC_PAYMASTER_URL,
   },
 });

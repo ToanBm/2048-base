@@ -18,12 +18,12 @@ import { useEffect } from "react";
 
 function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { mounted } = useTheme();
-  
+
   // Prevent flash of unstyled content
   if (!mounted) {
     return <>{children}</>;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -31,8 +31,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <OnchainKitProvider
-        apiKey={env.NEXT_PUBLIC_ONCHAINKIT_API_KEY || undefined}
-        projectId={env.NEXT_PUBLIC_MINIKIT_PROJECT_ID}
+        apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY || undefined}
         chain={base}
         config={{
           appearance: {

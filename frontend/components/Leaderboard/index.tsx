@@ -6,7 +6,7 @@ import {
   getTopWeekly,
   getTopDaily,
 } from "@/lib/leaderboard";
-import { LeaderboardEntry } from "@/lib/supabase";
+import { LeaderboardEntry } from "@/lib/leaderboard";
 
 type LeaderboardType = "all-time" | "weekly" | "daily";
 

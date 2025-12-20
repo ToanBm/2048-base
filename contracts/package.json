@@ -1,0 +1,26 @@
+{
+  "name": "2048-onchain-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for 2048 Onchain game",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.ts --network base",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network base",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
+    "verify": "hardhat verify --network base",
+    "verify:mainnet": "hardhat verify --network base",
+    "verify:sepolia": "hardhat verify --network baseSepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@types/node": "^20.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.20.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}
+

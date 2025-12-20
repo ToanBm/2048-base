@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   GameState,
   initializeGame,
@@ -9,11 +9,16 @@ import {
 } from "@/lib/games/game2048";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { sdk } from "@farcaster/frame-sdk";
-import { submitScore, getUserBestScore } from "@/lib/leaderboard";
-import { useAccount } from "wagmi";
+import { submitScore, getUserBestScore, validateScore } from "@/lib/leaderboard";
+import { game2048Contract } from "@/lib/game2048";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
+import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
+import { useName, Name, Identity, Avatar } from "@coinbase/onchainkit/identity";
+import { base } from "wagmi/chains";
 import Leaderboard from "@/components/Leaderboard";
 import OnboardingModal from "@/components/OnboardingModal";
 import BottomNav from "@/components/BottomNav";
+import Header from "@/components/Header";
 import { useTheme } from "@/hooks/use-theme";
 
 const BOARD_SIZE = 4;
@@ -44,16 +49,51 @@ function getTextColor(value: number): string {
 
 export default function Game2048() {
   const { context } = useMiniKit();
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const { theme, toggleTheme } = useTheme();
+  const { writeContract, isPending: isWriting, error: writeError } = useWriteContract();
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
+
+  const { isLoading: isConfirming, isSuccess, isError: isTransactionError } = useWaitForTransactionReceipt({
+    hash: txHash,
+    pollingInterval: 1000, // Check every 1 second
+  });
+  const publicClient = usePublicClient();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isSubmittingScore, setIsSubmittingScore] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [activeTab, setActiveTab] = useState<"game" | "share" | "submit" | "leaderboard">("game");
+  const [transactionStatus, setTransactionStatus] = useState<{ type: "info" | "success" | "error"; message: string; hash?: string } | null>(null);
+
+  // Ref to store score being submitted (to avoid dependency on gameState)
+  const submittedScoreRef = useRef<number>(0);
 
   // Get player address (from wallet)
   const playerAddress = address || null;
+
+  // Get domain name (Basename) from address
+  const { data: domainName, isLoading: isLoadingDomain } = useName({
+    address: address as `0x${string}` | undefined,
+    // chain: base, // Let OnchainKitProvider handle the chain
+  } as any);
+
+  // Debug log for domain name and API key
+  useEffect(() => {
+    if (address) {
+      console.log("Debug Info:", {
+        address,
+        domainName,
+        isLoadingDomain,
+        hasApiKey: !!process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY,
+        chain: base.id
+      });
+    }
+  }, [address, domainName, isLoadingDomain]);
+
+  // Detect client type
+  const isBaseApp = context?.client?.clientFid === 309857;
+  const isFarcaster = context?.client?.clientFid === 1;
 
   // Check if onboarding has been shown before
   useEffect(() => {
@@ -72,20 +112,29 @@ export default function Game2048() {
     }
   };
 
-  // Initialize game state and load best score from Supabase
+  // Initialize game state and load best score from contract
   useEffect(() => {
-    if (typeof window !== "undefined" && !gameState && playerAddress) {
-      // Load best score from Supabase
-      getUserBestScore(playerAddress).then((bestScore) => {
-        setGameState(initializeGame(bestScore));
-      });
-    } else if (typeof window !== "undefined" && !gameState && !playerAddress) {
-      // Fallback to localStorage if no address
+    if (typeof window !== "undefined" && !gameState) {
+      // Always initialize game immediately, then try to load best score
       const savedBestScore = parseInt(
         localStorage.getItem("2048-best-score") || "0",
         10
       );
       setGameState(initializeGame(savedBestScore));
+
+      // If we have player address, try to load from contract (async, non-blocking)
+      if (playerAddress) {
+        getUserBestScore(playerAddress)
+          .then((bestScore) => {
+            if (bestScore > savedBestScore) {
+              setGameState(initializeGame(bestScore));
+            }
+          })
+          .catch((error) => {
+            console.error("Error loading best score from contract:", error);
+            // Already initialized with localStorage, so just log error
+          });
+      }
     }
   }, [gameState, playerAddress]);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -104,7 +153,7 @@ export default function Game2048() {
   // Handle keyboard input
   useEffect(() => {
     if (!gameState) return;
-    
+
     const handleKeyPress = (e: KeyboardEvent) => {
       if (gameState.gameOver) return;
 
@@ -183,7 +232,7 @@ export default function Game2048() {
   const handleNewGame = async () => {
     let savedBestScore = 0;
     if (playerAddress) {
-      // Load from Supabase
+      // Load from contract
       savedBestScore = await getUserBestScore(playerAddress);
     } else if (typeof window !== "undefined") {
       // Fallback to localStorage
@@ -195,31 +244,155 @@ export default function Game2048() {
     setGameState(initializeGame(savedBestScore));
   };
 
-  // Submit current score to leaderboard
+  // Submit current score to contract
   const handleSubmitScore = async () => {
-    if (!gameState || !playerAddress || gameState.score === 0) return;
+    if (!gameState || !playerAddress || gameState.score === 0) {
+      alert("Please connect wallet and play the game first!");
+      return;
+    }
+
+    if (!address) {
+      alert("Please connect your wallet first!");
+      return;
+    }
 
     setIsSubmittingScore(true);
-    const result = await submitScore(playerAddress, gameState.score);
-    setIsSubmittingScore(false);
+    // Store score in ref to avoid dependency on gameState in useEffect
+    submittedScoreRef.current = gameState.score;
+    const currentScore = gameState.score;
 
-    if (result.success) {
-      alert(`✅ Score ${gameState.score} submitted to leaderboard!`);
-      // Refresh best score
-      const newBest = await getUserBestScore(playerAddress);
-      if (newBest > gameState.bestScore) {
-        setGameState((prev) =>
-          prev ? { ...prev, bestScore: newBest } : prev
-        );
+    try {
+      // Validate score first
+      const validation = await validateScore(address, currentScore);
+      if (!validation.valid) {
+        setTransactionStatus({ type: "error", message: validation.error || "Invalid score" });
+        setIsSubmittingScore(false);
+        return;
       }
-    } else {
-      alert(`❌ Failed to submit score: ${result.error}`);
+
+      console.log("Submitting score to contract:", { address: game2048Contract.address, score: currentScore });
+
+      writeContract({
+        ...game2048Contract,
+        functionName: "submitScore",
+        args: [BigInt(currentScore)],
+      }, {
+        onSuccess: (hash) => {
+          console.log("Transaction sent:", hash);
+          setTxHash(hash);
+          setTransactionStatus({
+            type: "info",
+            message: "Transaction submitted. Waiting for confirmation..."
+          });
+        },
+        onError: (error) => {
+          console.error("Transaction error:", error);
+          setIsSubmittingScore(false);
+          setTransactionStatus({ type: "error", message: error.message || "Transaction failed" });
+        }
+      });
+    } catch (error: any) {
+      console.error("Error submitting score:", error);
+      setIsSubmittingScore(false);
+      setTransactionStatus({ type: "error", message: error.message || "Failed to submit score" });
     }
   };
 
+  // Monitor transaction status
+  useEffect(() => {
+    if (txHash && isSubmittingScore) {
+      // Show pending status immediately if not already shown
+      if (transactionStatus?.type !== "info") {
+        setTransactionStatus({
+          type: "info",
+          message: "Transaction submitted. Waiting for confirmation..."
+        });
+      }
+    }
+  }, [txHash, isSubmittingScore]);
+
+  // Manual polling for transaction receipt (Backup for useWaitForTransactionReceipt)
+  useEffect(() => {
+    if (!txHash || !isSubmittingScore || !publicClient) return;
+
+    const checkReceipt = async () => {
+      try {
+        console.log("Manual receipt check:", txHash);
+        const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+
+        if (receipt && receipt.status === 'success') {
+          console.log("Manual check success!", receipt);
+          setIsSubmittingScore(false);
+          setTransactionStatus({
+            type: "success",
+            message: `✅ Score ${submittedScoreRef.current} submitted successfully!`,
+            hash: txHash
+          });
+
+          // Refresh best score
+          if (playerAddress) {
+            getUserBestScore(playerAddress).then((newBest) => {
+              setGameState((prev) =>
+                prev ? { ...prev, bestScore: Math.max(prev.bestScore, newBest) } : prev
+              );
+            });
+          }
+        } else if (receipt && receipt.status === 'reverted') {
+          setIsSubmittingScore(false);
+          setTransactionStatus({ type: "error", message: "❌ Transaction failed (reverted)." });
+        }
+      } catch (e) {
+        console.warn("Manual check failed (expected if pending):", e);
+      }
+    };
+
+    // Check every 2 seconds
+    const interval = setInterval(checkReceipt, 2000);
+    return () => clearInterval(interval);
+  }, [txHash, isSubmittingScore, publicClient, playerAddress]);
+
+  // Handle writeContract error (before transaction is sent)
+  useEffect(() => {
+    if (writeError && isSubmittingScore) {
+      setTransactionStatus({
+        type: "error",
+        message: `❌ Error: ${writeError.message || "Failed to send transaction. Please try again."}`
+      });
+      setIsSubmittingScore(false);
+      const timer = setTimeout(() => setTransactionStatus(null), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [writeError, isSubmittingScore]);
+
+  // Handle transaction error (after transaction is sent)
+  useEffect(() => {
+    if (isTransactionError) {
+      setTransactionStatus({ type: "error", message: "❌ Transaction failed. Please try again." });
+      const timer = setTimeout(() => setTransactionStatus(null), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [isTransactionError]);
+
+  // Safety timer: Reset submitting state after 45 seconds if still submitting
+  // This handles cases where RPC is slow or transaction is stuck
+  useEffect(() => {
+    if (isSubmittingScore) {
+      const safetyTimer = setTimeout(() => {
+        console.warn("Safety timer: Resetting isSubmittingScore after 45s");
+        setIsSubmittingScore(false);
+        setTransactionStatus({
+          type: "error",
+          message: "⏱️ Transaction is taking too long. Please check on blockchain explorer."
+        });
+        setTimeout(() => setTransactionStatus(null), 10000);
+      }, 45000); // 45 seconds
+      return () => clearTimeout(safetyTimer);
+    }
+  }, [isSubmittingScore]);
+
   const handleShare = () => {
     if (!gameState) return;
-    
+
     const shareText = `🎮 2048 Onchain Score: ${gameState.score}${gameState.won ? " 🏆" : ""}\n\nCan you beat my score? Play now! 👇`;
     try {
       // Use SDK compose action (available automatically in mini app clients)
@@ -257,66 +430,16 @@ export default function Game2048() {
     );
   }
 
+  // Calculate submitting state - SIMPLIFIED LOGIC
+  // Only use isSubmittingScore to control button state
+  // isSuccess/isTransactionError will reset isSubmittingScore in useEffect above
+  const isSubmitting = isSubmittingScore || isConfirming || isWriting;
+
   return (
     <div className="flex flex-col items-center min-h-screen pt-4 px-4 pb-20 bg-[#eef0f3] dark:bg-gray-900">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="mb-8 text-center relative">
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            className="absolute top-0 right-0 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? (
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                />
-              </svg>
-            )}
-          </button>
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2">2048 Onchain</h1>
-          <div className="flex items-center justify-center gap-2 text-base text-gray-600 dark:text-gray-400">
-            {context?.user?.displayName ? (
-              <>
-                <span>Welcome,</span>
-                {context.user.pfpUrl && (
-                  <img
-                    src={context.user.pfpUrl}
-                    alt={context.user.displayName}
-                    className="w-6 h-6 rounded-full border border-gray-300"
-                  />
-                )}
-                <span className="font-semibold">{context.user.displayName}!</span>
-              </>
-            ) : (
-              <span>Join tiles, get to 2048!</span>
-            )}
-          </div>
-        </div>
+        <Header />
 
         {/* Score Board */}
         <div className="flex gap-2 mb-6">
@@ -329,6 +452,35 @@ export default function Game2048() {
             <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{gameState.bestScore}</div>
           </div>
         </div>
+
+        {/* Transaction Status - Fixed position to appear on top */}
+        {transactionStatus && (
+          <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4 mb-4 p-4 rounded-lg shadow-lg text-center ${transactionStatus.type === "success"
+            ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+            : transactionStatus.type === "error"
+              ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+              : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+            }`}>
+            <div className={`text-sm font-medium ${transactionStatus.type === "success"
+              ? "text-green-700 dark:text-green-300"
+              : transactionStatus.type === "error"
+                ? "text-red-700 dark:text-red-300"
+                : "text-blue-700 dark:text-blue-300"
+              }`}>
+              {transactionStatus.message}
+            </div>
+            {transactionStatus.type === "success" && transactionStatus.hash && (
+              <a
+                href={`https://basescan.org/tx/${transactionStatus.hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 text-xs text-green-600 dark:text-green-400 hover:underline block"
+              >
+                View on BaseScan →
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Game Board */}
         <div
@@ -352,8 +504,8 @@ export default function Game2048() {
                     className={`
                       text-2xl font-bold ${getTextColor(value)}
                       transition-all duration-150
-                      ${value === 0 
-                        ? "opacity-0 scale-0" 
+                      ${value === 0
+                        ? "opacity-0 scale-0"
                         : "opacity-100 scale-100"
                       }
                     `}
@@ -407,6 +559,42 @@ export default function Game2048() {
         isOpen={showOnboarding}
         onClose={handleCloseOnboarding}
       />
+      {/* Debug Section - Remove in production */}
+      <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs font-mono break-all">
+        <p className="font-bold mb-2">Debug Info:</p>
+        <p>State: {isSubmittingScore ? 'Submitting' : 'Idle'}</p>
+        <p>Hash: {txHash || 'None'}</p>
+        <p>Status: {transactionStatus?.message || 'None'}</p>
+        <p>PublicClient: {publicClient ? 'Ready' : 'Not Ready'}</p>
+        <button
+          onClick={async () => {
+            if (!txHash || !publicClient) {
+              alert("No hash or client");
+              return;
+            }
+            try {
+              console.log("Force checking receipt for:", txHash);
+              const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+              console.log("Force check result:", receipt);
+              alert(`Receipt found! Status: ${receipt.status}`);
+              if (receipt.status === 'success') {
+                setIsSubmittingScore(false);
+                setTransactionStatus({
+                  type: "success",
+                  message: "✅ Manually confirmed success!",
+                  hash: txHash
+                });
+              }
+            } catch (e: any) {
+              console.error("Force check error:", e);
+              alert(`Error checking: ${e.message}`);
+            }
+          }}
+          className="mt-2 px-2 py-1 bg-red-500 text-white rounded"
+        >
+          Force Check Receipt
+        </button>
+      </div>
 
       {/* Bottom Navigation */}
       <BottomNav
@@ -416,9 +604,8 @@ export default function Game2048() {
         onNewGameClick={handleNewGame}
         onShareClick={handleShare}
         onSubmitClick={handleSubmitScore}
-        isSubmitting={isSubmittingScore}
+        isSubmitting={isSubmitting}
       />
     </div>
   );
 }
-
